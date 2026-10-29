@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biblioteca Escolar SENA — Plataforma Web</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- NAVBAR PRINCIPAL A PANTALLA COMPLETA -->
+  <header class="bg-blue-600 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-white text-blue-700 flex items-center justify-center font-black text-lg shadow-sm">
+          CV
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold leading-tight">Biblioteca Pública SENA</h1>
+          <p class="text-xs text-blue-100 hidden sm:block">Calidad a su servicio · Sistema de Gestión de Préstamos</p>
+        </div>
+      </div>
+
+      <!-- Navegación y Sesión -->
+      <div class="flex items-center gap-2 sm:gap-4">
+        <div id="userBadgeContainer" class="hidden items-center gap-2 bg-blue-700/70 px-3 py-1.5 rounded-xl border border-blue-400/40">
+          <i class="fa-solid fa-user-circle text-lg text-blue-200"></i>
+          <div class="text-left leading-none">
+            <span id="userNameDisplay" class="text-xs font-bold block">Usuario</span>
+            <span id="userRoleBadge" class="text-[10px] uppercase font-extrabold text-blue-200">Estudiante</span>
+          </div>
+        </div>
+
+        <button id="btnNavCerrarSesion" onclick="cerrarSesion()" class="hidden px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-power-off"></i>
+          <span class="hidden sm:inline">Cerrar Sesión</span>
+        </button>
+
+        <div id="authNavButtons" class="flex items-center gap-2">
+          <button onclick="cambiarVistaAuth('login')" class="px-3.5 py-1.5 rounded-lg bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold shadow-sm transition">
+            Iniciar Sesión
+          </button>
+          <button onclick="cambiarVistaAuth('registro')" class="px-3.5 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white border border-blue-400/40 text-xs font-bold transition">
+            Registrarse
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ALERTA / TOAST NOTIFICACIÓN -->
+  <div id="toastAlerta" class="hidden fixed top-20 right-6 z-50 max-w-md p-4 rounded-2xl shadow-2xl text-sm font-semibold transition-all transform flex items-start gap-3 border"></div>
+
+  <!-- MODAL DE ALERTA DE ÉXITO SENA -->
+  <div id="modalExito" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl text-center space-y-4 border border-slate-100 transform transition-all">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3 id="modalTitulo" class="text-xl font-extrabold text-slate-800">¡Operación Exitosa!</h3>
+      <p id="modalMensaje" class="text-sm text-slate-600 leading-relaxed">
+        La solicitud de préstamo se ha registrado en estado <b>pendiente</b> en Supabase.
+      </p>
+      <button onclick="cerrarModalExito()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition">
+        Entendido
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL (ALERTDIALOG) CREAR NUEVO LIBRO (SOLO VISTA ADMIN) -->
+  <div id="modalCrearLibro" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100 transform transition-all">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5 text-blue-600 font-extrabold text-lg">
+          <i class="fa-solid fa-book-medical text-xl"></i>
+          <h3>Crear Nuevo Libro</h3>
+        </div>
+        <button onclick="cerrarModalCrearLibro()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleGuardarLibro(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Título</label>
+          <input id="inputCrearTitulo" type="text" required placeholder="Ingresa el título del libro"
+            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Autor</label>
+          <input id="inputCrearAutor" type="text" required placeholder="Ingresa el autor"
+            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Área</label>
+          <input id="inputCrearArea" type="text" required placeholder="Ej: Matemáticas, Literatura, etc."
+            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Stock</label>
+          <input id="inputCrearStock" type="number" min="0" required placeholder="Cantidad de ejemplares"
+            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="cerrarModalCrearLibro()"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+            class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL AUMENTAR STOCK (ADMIN) -->
+  <div id="modalAumentarStock" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 border border-slate-100 transform transition-all">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2 text-blue-600 font-extrabold text-lg">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <h3>Aumentar Stock</h3>
+        </div>
+        <button onclick="cerrarModalAumentarStock()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleGuardarStock(event)" class="space-y-3.5">
+        <input type="hidden" id="stockIdLibro" value="" />
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" id="lblStockTituloLibro">Libro: ...</label>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Cantidad de Nuevos Ejemplares</label>
+          <input id="inputStockCantidad" type="number" min="1" value="1" required placeholder="Ej. 3"
+            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 font-bold" />
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="cerrarModalAumentarStock()"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+            Cancelar
+          </button>
+          <button type="submit"
+            class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition">
+            Aumentar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR PRINCIPAL NATIVO A PANTALLA COMPLETA -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- SECCIÓN DE AUTENTICACIÓN (LOGIN Y REGISTRO) -->
+    <div id="seccionAuth" class="max-w-md mx-auto my-8">
+      <!-- Tarjeta Login -->
+      <div id="cardLogin" class="bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center mx-auto text-2xl font-black mb-3 shadow-md shadow-blue-500/20">
+            CV
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-800">Iniciar Sesión</h2>
+          <p class="text-xs text-slate-500 mt-1">Ingresa tu documento y contraseña para acceder</p>
+        </div>
+
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Documento de Identidad</label>
+            <div class="relative">
+              <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-400"></i>
+              <input id="loginDoc" type="text" required placeholder="Número de documento"
+                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Contraseña</label>
+            <div class="relative">
+              <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400"></i>
+              <input id="loginPass" type="password" required placeholder="Contraseña"
+                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+            <span>Ingresar al Sistema</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="mt-6 text-center border-t border-slate-100 pt-4">
+          <p class="text-xs text-slate-500">¿No tienes una cuenta aún?</p>
+          <button onclick="cambiarVistaAuth('registro')" class="mt-1 text-xs font-bold text-blue-600 hover:text-blue-800">
+            Crear cuenta nueva
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjeta Registro -->
+      <div id="cardRegistro" class="hidden bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto text-2xl mb-3 shadow-md">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-800">Crear Cuenta</h2>
+          <p class="text-xs text-slate-500 mt-1">Registro con encriptación segura Bcrypt en Supabase</p>
+        </div>
+
+        <form onsubmit="handleRegister(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Documento de Identidad</label>
+            <input id="regDoc" type="text" required placeholder="Ej: 10001001"
+              class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nombre Completo</label>
+            <input id="regNombre" type="text" required placeholder="Ej: Valentina López"
+              class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Contraseña</label>
+            <input id="regPass" type="password" required placeholder="Mínimo 4 caracteres"
+              class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Rol</label>
+            <select id="regRol" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500">
+              <option value="Estudiante">Estudiante</option>
+              <option value="Profesor">Profesor</option>
+              <option value="Admin">Administrador</option>
+            </select>
+          </div>
+
+          <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition">
+            Registrar Usuario
+          </button>
+        </form>
+
+        <div class="mt-6 text-center border-t border-slate-100 pt-4">
+          <button onclick="cambiarVistaAuth('login')" class="text-xs font-bold text-blue-600 hover:text-blue-800">
+            ¿Ya tienes cuenta? Iniciar Sesión
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN PRINCIPAL DE LA APLICACIÓN (CUANDO HAY SESIÓN INICIADA) -->
+    <div id="seccionApp" class="hidden space-y-6">
+
+      <!-- PESTAÑAS DE NAVEGACIÓN WEB -->
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div class="flex items-center gap-2">
+          <button onclick="cambiarTabApp('catalogo')" id="tabBtnCatalogo" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-blue-600 text-white shadow-sm transition">
+            <i class="fa-solid fa-book mr-1.5"></i> Catálogo de Libros
+          </button>
+          <button onclick="cambiarTabApp('misPrestamos')" id="tabBtnMisPrestamos" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition">
+            <i class="fa-solid fa-bookmark mr-1.5"></i> Mis Préstamos
+          </button>
+          <button onclick="cambiarTabApp('adminPendientes')" id="tabBtnAdminPendientes" class="hidden px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition">
+            <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Solicitudes Pendientes (Admin)
+          </button>
+        </div>
+
+        <button onclick="recargarDatos()" class="px-3.5 py-2 rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-rotate"></i>
+          <span>Actualizar</span>
+        </button>
+      </div>
+
+      <!-- VISTA TAB 1: CATÁLOGO DE LIBROS (ROL ESTUDIANTE/PROFESOR/ADMIN) -->
+      <div id="vistaCatalogo" class="space-y-6">
+        <!-- Barra de búsqueda y filtros -->
+        <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div class="relative w-full md:max-w-md">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400"></i>
+            <input id="inputBuscarLibro" oninput="filtrarCatalogo()" type="text" placeholder="Buscar por título, autor o área..."
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white" />
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            <span class="font-bold">Total Libros:</span> <span id="lblTotalLibros" class="font-mono text-blue-600 font-bold">0</span>
+          </div>
+        </div>
+
+        <!-- Grid de libros a pantalla completa -->
+        <div id="gridLibros" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </div>
+
+      <!-- VISTA TAB 2: MIS PRÉSTAMOS -->
+      <div id="vistaMisPrestamos" class="hidden space-y-4">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+          <h2 class="text-lg font-bold text-slate-800 mb-1">Historial de Mis Préstamos</h2>
+          <p class="text-xs text-slate-500 mb-4">Aquí puedes consultar las solicitudes pendientes, préstamos activos y devoluciones.</p>
+          <div id="listaMisPrestamos" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- VISTA TAB 3: ADMINISTRADOR - PRÉSTAMOS PENDIENTES CON BOTÓN "PRESTAR" -->
+      <div id="vistaAdminPendientes" class="hidden space-y-4">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-amber-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span>
+                Panel Administrador: Solicitudes de Préstamo Pendientes
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Consume <code class="text-amber-700 bg-amber-50 px-1 py-0.5 rounded font-mono">GET /api/prestamos/pendientes</code> y actualiza el estado a <b>activo</b> con <code class="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded font-mono">PUT /api/prestamos/:id/aprobar</code>.
+              </p>
+            </div>
+            <span id="badgePendientesCount" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 w-fit">
+              0 Pendientes
+            </span>
+          </div>
+
+          <div id="listaAdminPendientes" class="space-y-3"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- BOTÓN FLOTANTE (FAB) PARA CREACIÓN DE LIBROS (SOLO ADMINISTRADOR) -->
+  <button id="fabCrearLibro" onclick="abrirModalCrearLibro()"
+    class="hidden fixed bottom-8 right-8 z-40 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center gap-2.5 text-sm font-bold transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-white shadow-blue-600/40"
+    title="Crear Nuevo Libro">
+    <i class="fa-solid fa-plus text-base"></i>
+    <span>Nuevo Libro</span>
+  </button>
+
+  <script>
+    let token = localStorage.getItem('biblio_token') || null;
+    let catalogoGlobal = [];
+    let vistaActualTab = 'catalogo';
+
+    function decodificarJwt(jwtStr) {
+      try {
+        const base64Url = jwtStr.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function mostrarToast(mensaje, exito = true) {
+      const toast = document.getElementById('toastAlerta');
+      toast.className = `fixed top-20 right-6 z-50 max-w-md p-4 rounded-2xl shadow-2xl text-sm font-semibold transition-all transform flex items-start gap-3 border ${
+        exito ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-500'
+      }`;
+      toast.innerHTML = `
+        <i class="fa-solid ${exito ? 'fa-circle-check' : 'fa-circle-exclamation'} text-lg mt-0.5"></i>
+        <div class="flex-1">${mensaje}</div>
+      `;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 4000);
+    }
+
+    function mostrarModalAlerta(titulo, mensaje) {
+      document.getElementById('modalTitulo').textContent = titulo;
+      document.getElementById('modalMensaje').innerHTML = mensaje;
+      document.getElementById('modalExito').classList.remove('hidden');
+    }
+
+    function cerrarModalExito() {
+      document.getElementById('modalExito').classList.add('hidden');
+    }
+
+    async function apiFetch(url, options = {}) {
+      const headers = options.headers || {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+      const res = await fetch(url, { ...options, headers });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.mensaje || 'Error en la petición');
+      return data;
+    }
+
+    function cambiarVistaAuth(vista) {
+      document.getElementById('cardLogin').classList.toggle('hidden', vista !== 'login');
+      document.getElementById('cardRegistro').classList.toggle('hidden', vista !== 'registro');
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      try {
+        const body = {
+          documento: document.getElementById('regDoc').value.trim(),
+          nombre: document.getElementById('regNombre').value.trim(),
+          contrasena: document.getElementById('regPass').value.trim(),
+          rol: document.getElementById('regRol').value
+        };
+        const data = await apiFetch('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+        mostrarToast(data.mensaje || 'Usuario registrado con éxito en Supabase');
+        document.getElementById('loginDoc').value = body.documento;
+        document.getElementById('loginPass').value = '';
+        cambiarVistaAuth('login');
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const documento = document.getElementById('loginDoc').value.trim();
+      const contrasena = document.getElementById('loginPass').value.trim();
+
+      try {
+        const data = await apiFetch('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ documento, contrasena })
+        });
+        token = data.token;
+        localStorage.setItem('biblio_token', token);
+        actualizarEstadoSesion();
+        mostrarToast('Inicio de sesión exitoso. Bienvenido(a).');
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    function cerrarSesion() {
+      token = null;
+      localStorage.removeItem('biblio_token');
+      actualizarEstadoSesion();
+    }
+
+    function actualizarEstadoSesion() {
+      const payload = token ? decodificarJwt(token) : null;
+
+      if (!payload) {
+        document.getElementById('seccionAuth').classList.remove('hidden');
+        document.getElementById('seccionApp').classList.add('hidden');
+        document.getElementById('userBadgeContainer').classList.add('hidden');
+        document.getElementById('userBadgeContainer').classList.remove('flex');
+        document.getElementById('btnNavCerrarSesion').classList.add('hidden');
+        document.getElementById('authNavButtons').classList.remove('hidden');
+        const fab = document.getElementById('fabCrearLibro');
+        if (fab) fab.classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('seccionAuth').classList.add('hidden');
+      document.getElementById('seccionApp').classList.remove('hidden');
+      document.getElementById('userBadgeContainer').classList.remove('hidden');
+      document.getElementById('userBadgeContainer').classList.add('flex');
+      document.getElementById('btnNavCerrarSesion').classList.remove('hidden');
+      document.getElementById('authNavButtons').classList.add('hidden');
+
+      const rol = payload.rol || (payload.tipo_usuario === 'administrador' ? 'Admin' : 'Estudiante');
+      document.getElementById('userNameDisplay').textContent = `${payload.nombre || ''} ${payload.apellido || ''}`.trim();
+      document.getElementById('userRoleBadge').textContent = rol;
+
+      const rolLower = rol.toLowerCase();
+      const esAdmin = rolLower === 'admin' || rolLower === 'administrador' || payload.tipo_usuario === 'administrador' || payload.tipo_usuario === 'administrativo';
+      const btnAdminPendientes = document.getElementById('tabBtnAdminPendientes');
+      btnAdminPendientes.classList.toggle('hidden', !esAdmin);
+
+      const fab = document.getElementById('fabCrearLibro');
+      if (fab) fab.classList.toggle('hidden', !esAdmin);
+
+      cambiarTabApp('catalogo');
+    }
+
+    function abrirModalCrearLibro() {
+      document.getElementById('inputCrearTitulo').value = '';
+      document.getElementById('inputCrearAutor').value = '';
+      document.getElementById('inputCrearArea').value = '';
+      document.getElementById('inputCrearStock').value = '';
+      document.getElementById('modalCrearLibro').classList.remove('hidden');
+    }
+
+    function cerrarModalCrearLibro() {
+      document.getElementById('modalCrearLibro').classList.add('hidden');
+    }
+
+    async function handleGuardarLibro(e) {
+      e.preventDefault();
+      const titulo = document.getElementById('inputCrearTitulo').value.trim();
+      const autor = document.getElementById('inputCrearAutor').value.trim();
+      const area = document.getElementById('inputCrearArea').value.trim();
+      const stock = parseInt(document.getElementById('inputCrearStock').value, 10) || 1;
+
+      if (!titulo || !autor || !area) {
+        mostrarToast('Por favor completa título, autor y área.', false);
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/api/libros', {
+          method: 'POST',
+          body: JSON.stringify({ titulo, autor, area, stock, cantidad: stock })
+        });
+
+        mostrarToast(res.mensaje || `¡Libro "${titulo}" creado con éxito!`);
+        cerrarModalCrearLibro();
+        await cargarCatalogo();
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    async function eliminarLibroAdmin(idLibro, tituloLibro) {
+      if (!confirm(`¿Estás seguro de que deseas eliminar el libro "${tituloLibro}" y todos sus ejemplares?`)) {
+        return;
+      }
+
+      try {
+        const res = await apiFetch(`/api/libros/${idLibro}`, {
+          method: 'DELETE'
+        });
+
+        mostrarToast(res.mensaje || `Libro "${tituloLibro}" eliminado con éxito`);
+        await cargarCatalogo();
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    function abrirModalAumentarStock(idLibro, titulo) {
+      document.getElementById('stockIdLibro').value = idLibro;
+      document.getElementById('lblStockTituloLibro').textContent = `Libro: ${titulo}`;
+      document.getElementById('inputStockCantidad').value = '1';
+      document.getElementById('modalAumentarStock').classList.remove('hidden');
+    }
+
+    function cerrarModalAumentarStock() {
+      document.getElementById('modalAumentarStock').classList.add('hidden');
+    }
+
+    async function handleGuardarStock(e) {
+      e.preventDefault();
+      const idLibro = document.getElementById('stockIdLibro').value;
+      const cantidad = parseInt(document.getElementById('inputStockCantidad').value, 10) || 1;
+
+      if (!idLibro || cantidad <= 0) {
+        mostrarToast('Ingresa una cantidad válida mayor a 0.', false);
+        return;
+      }
+
+      try {
+        const res = await apiFetch(`/api/libros/${idLibro}/aumentar-stock`, {
+          method: 'POST',
+          body: JSON.stringify({ id_libro: idLibro, cantidad })
+        });
+
+        mostrarToast(res.mensaje || '¡Stock aumentado con éxito!');
+        cerrarModalAumentarStock();
+        await cargarCatalogo();
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    function cambiarTabApp(tab) {
+      vistaActualTab = tab;
+      document.getElementById('vistaCatalogo').classList.toggle('hidden', tab !== 'catalogo');
+      document.getElementById('vistaMisPrestamos').classList.toggle('hidden', tab !== 'misPrestamos');
+      document.getElementById('vistaAdminPendientes').classList.toggle('hidden', tab !== 'adminPendientes');
+
+      const btnCat = document.getElementById('tabBtnCatalogo');
+      const btnMis = document.getElementById('tabBtnMisPrestamos');
+      const btnAdm = document.getElementById('tabBtnAdminPendientes');
+
+      btnCat.className = `px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+        tab === 'catalogo' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+      }`;
+      btnMis.className = `px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+        tab === 'misPrestamos' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+      }`;
+      btnAdm.className = `px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+        tab === 'adminPendientes' ? 'bg-amber-600 text-white shadow-sm' : 'bg-amber-500 hover:bg-amber-600 text-white'
+      }`;
+
+      recargarDatos();
+    }
+
+    function recargarDatos() {
+      if (vistaActualTab === 'catalogo') cargarCatalogo();
+      if (vistaActualTab === 'misPrestamos') cargarMisPrestamos();
+      if (vistaActualTab === 'adminPendientes') cargarAdminPendientes();
+    }
+
+    async function cargarCatalogo() {
+      try {
+        catalogoGlobal = await apiFetch('/api/libros');
+        document.getElementById('lblTotalLibros').textContent = catalogoGlobal.length;
+        renderCatalogo(catalogoGlobal);
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    function filtrarCatalogo() {
+      const q = document.getElementById('inputBuscarLibro').value.toLowerCase().trim();
+      renderCatalogo(catalogoGlobal.filter(l =>
+        l.titulo.toLowerCase().includes(q) ||
+        l.autor.toLowerCase().includes(q) ||
+        l.area.toLowerCase().includes(q)
+      ));
+    }
+
+    function renderCatalogo(libros) {
+      const grid = document.getElementById('gridLibros');
+      if (!libros.length) {
+        grid.innerHTML = `<div class="col-span-full py-16 text-center text-slate-400 font-semibold">No se encontraron libros disponibles en el catálogo.</div>`;
+        return;
+      }
+
+      const payload = token ? decodificarJwt(token) : null;
+      const rolStr = (payload ? (payload.rol || payload.tipo_usuario || '') : '').toLowerCase();
+      const esAdmin = rolStr === 'admin' || rolStr === 'administrador' || rolStr === 'administrativo';
+      const puedeSolicitar = (rolStr === 'estudiante' || rolStr === 'profesor') && !esAdmin;
+
+      grid.innerHTML = libros.map(libro => {
+        const ejemplares = libro.ejemplares || [];
+        const disponibles = ejemplares.filter(e => e.disponibilidad === 'disponible');
+        const primerDisponible = disponibles[0];
+        const tieneStock = disponibles.length > 0;
+
+        let botonAccion = '';
+        if (esAdmin) {
+          botonAccion = `
+            <div class="flex items-center gap-2 w-full">
+              <button onclick="abrirModalAumentarStock(${libro.id_libro}, '${libro.titulo.replace(/'/g, "\\'")}')"
+                      class="flex-1 py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-blue-200 shadow-sm"
+                      title="Aumentar Stock">
+                <i class="fa-solid fa-plus-circle text-blue-600"></i>
+                <span>Aumentar Stock</span>
+              </button>
+              <button onclick="eliminarLibroAdmin(${libro.id_libro}, '${libro.titulo.replace(/'/g, "\\'")}')"
+                      class="py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-rose-200 shadow-sm"
+                      title="Eliminar libro">
+                <i class="fa-solid fa-trash text-sm"></i>
+                <span class="hidden sm:inline">Eliminar</span>
+              </button>
+            </div>
+          `;
+        } else if (puedeSolicitar) {
+          botonAccion = tieneStock
+            ? `<button onclick="solicitarPrestamo(${primerDisponible.id_ejemplar}, '${libro.titulo.replace(/'/g, "\\'")}', '${primerDisponible.codigo_inventario}')"
+                class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                <i class="fa-solid fa-bookmark"></i>
+                <span>Solicitar (${primerDisponible.codigo_inventario})</span>
+              </button>`
+            : `<button disabled class="w-full py-2.5 px-4 bg-slate-200 text-slate-400 rounded-xl text-xs font-semibold cursor-not-allowed border border-slate-300 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-ban"></i>
+                <span>Solicitar</span>
+              </button>`;
+        }
+
+        return `
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <span class="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">${libro.area} · ${libro.anio_publicacion}</span>
+                <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold ${
+                  tieneStock ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                }">
+                  ${tieneStock ? `Stock: ${disponibles.length}/${ejemplares.length} disp.` : 'Agotado (0 disp.)'}
+                </span>
+              </div>
+
+              <div>
+                <h3 class="text-base font-extrabold text-slate-800 leading-snug">${libro.titulo}</h3>
+                <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-user-pen mr-1"></i>${libro.autor}</p>
+                <p class="text-[11px] text-slate-400 font-mono mt-0.5">Código: ${libro.codigo_libro}</p>
+              </div>
+            </div>
+
+            ${botonAccion ? `<div class="mt-6 pt-4 border-t border-slate-100">${botonAccion}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function solicitarPrestamo(idEjemplar, tituloLibro, codigoInventario) {
+      try {
+        const res = await apiFetch('/api/prestamos', {
+          method: 'POST',
+          body: JSON.stringify({ id_ejemplar: idEjemplar })
+        });
+
+        mostrarModalAlerta(
+          '¡Solicitud Registrada con Éxito!',
+          `Se ha enviado tu solicitud para el libro <b>"${tituloLibro}"</b> (Ejemplar: <b>${codigoInventario}</b>).<br><br>El préstamo ha quedado guardado con estado <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">pendiente</span> en Supabase a la espera de que el administrador lo apruebe.`
+        );
+
+        cargarCatalogo();
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    async function cargarMisPrestamos() {
+      try {
+        const prestamos = await apiFetch('/api/prestamos/mis-prestamos');
+        const cont = document.getElementById('listaMisPrestamos');
+
+        if (!prestamos.length) {
+          cont.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs">No tienes préstamos ni solicitudes registradas.</div>`;
+          return;
+        }
+
+        cont.innerHTML = prestamos.map(p => {
+          const libro = p.libro || {};
+          const ejemplar = p.ejemplar || {};
+          const estado = p.estado || 'activo';
+          const esPendiente = estado === 'pendiente';
+          const esActivo = estado === 'activo';
+
+          return `
+            <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 class="text-sm font-bold text-slate-800">${libro.titulo || 'Libro'}</h4>
+                <p class="text-xs text-slate-500">Ejemplar: ${ejemplar.codigo_inventario || p.id_ejemplar} · Fecha: ${p.fecha_prestamo || 'En trámite'}</p>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold w-fit ${
+                esPendiente ? 'bg-amber-100 text-amber-800' : (esActivo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700')
+              }">
+                ${estado.toUpperCase()}
+              </span>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    async function cargarAdminPendientes() {
+      try {
+        const pendientes = await apiFetch('/api/prestamos/pendientes');
+        document.getElementById('badgePendientesCount').textContent = `${pendientes.length} Pendientes`;
+        const cont = document.getElementById('listaAdminPendientes');
+
+        if (!pendientes.length) {
+          cont.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs">No hay solicitudes pendientes en este momento.</div>`;
+          return;
+        }
+
+        cont.innerHTML = pendientes.map(item => {
+          const idSolicitud = item.id_solicitud;
+          const usuario = item.usuario || {};
+          const ejemplar = item.ejemplar || {};
+          const libro = ejemplar.libro || {};
+
+          return `
+            <div class="p-5 rounded-2xl border border-amber-200 bg-amber-50/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[11px] font-bold">Solicitud #${idSolicitud}</span>
+                  <span class="text-xs text-slate-500">Ejemplar: <b>${ejemplar.codigo_inventario || '-'}</b></span>
+                </div>
+                <h4 class="text-sm font-bold text-slate-800">${libro.titulo || 'Libro'}</h4>
+                <p class="text-xs text-slate-600">
+                  Solicitante: <b>${usuario.nombre || ''} ${usuario.apellido || ''}</b> (${usuario.tipo_usuario || ''}) · Doc: <b>${usuario.documento || ''}</b>
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button onclick="aprobarPrestamoAdmin(${idSolicitud}, '${(libro.titulo || '').replace(/'/g, "\\'")}', '${usuario.nombre || ''}')"
+                  class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-check"></i>
+                  <span>Aprobar</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    async function aprobarPrestamoAdmin(idSolicitud, tituloLibro, nombreUsuario) {
+      try {
+        const res = await apiFetch(`/api/prestamos/${idSolicitud}/aprobar`, {
+          method: 'PUT'
+        });
+
+        mostrarModalAlerta(
+          '¡Préstamo Aprobado y Habilitado!',
+          `El libro <b>"${tituloLibro}"</b> ha sido prestado con éxito a <b>${nombreUsuario}</b>.<br><br>El estado ha sido actualizado a <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">activo</span> y el ejemplar marcado como prestado.`
+        );
+
+        cargarAdminPendientes();
+      } catch (err) {
+        mostrarToast(err.message, false);
+      }
+    }
+
+    // Inicializar estado al cargar
+    actualizarEstadoSesion();
+  </script>
+</body>
+</html>

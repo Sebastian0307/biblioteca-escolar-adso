@@ -1,0 +1,361 @@
+{
+  "info": {
+    "_postman_id": "b1b11073-ca00-4026-9999-5e0a2026b1b1",
+    "name": "Biblioteca Escolar SENA 2026 - API Completa",
+    "description": "Colección oficial de Postman para el Sistema de Gestión de Biblioteca Escolar (Node.js + Express + Sequelize + Supabase PostgreSQL).\n\nNota: El endpoint 'Iniciar Sesión (Login)' guarda automáticamente el JWT en la variable {{token}} de la colección.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación y Seed",
+      "item": [
+        {
+          "name": "Inicializar Base de Datos y Bcrypt (POST /seed)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/seed",
+              "host": ["{{base_url}}"],
+              "path": ["seed"]
+            }
+          }
+        },
+        {
+          "name": "Iniciar Sesión - Administrador (POST /auth/login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    console.log('Token JWT guardado automáticamente');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"10001001\",\n  \"contrasena\": \"10001001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Iniciar Sesión - Estudiante (POST /auth/login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"30003001\",\n  \"contrasena\": \"30003001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Catálogo de Libros y Ejemplares",
+      "item": [
+        {
+          "name": "Listar Libros con Ejemplares (GET /libros)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/libros",
+              "host": ["{{base_url}}"],
+              "path": ["libros"]
+            }
+          }
+        },
+        {
+          "name": "Crear Nuevo Libro (POST /libros)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo_libro\": \"LIB-099\",\n  \"titulo\": \"Arquitectura de Software Moderna\",\n  \"autor\": \"Martin Fowler\",\n  \"area\": \"Tecnología e Informática\",\n  \"anio_publicacion\": 2023\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/libros",
+              "host": ["{{base_url}}"],
+              "path": ["libros"]
+            }
+          }
+        },
+        {
+          "name": "Ver Ejemplares de un Libro (GET /libros/:id/ejemplares)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/libros/1/ejemplares",
+              "host": ["{{base_url}}"],
+              "path": ["libros", "1", "ejemplares"]
+            }
+          }
+        },
+        {
+          "name": "Agregar Ejemplar Físico a un Libro (POST /libros/:id/ejemplares)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo_inventario\": \"INV-001-C\",\n  \"condicion\": \"bueno\",\n  \"disponibilidad\": \"disponible\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/libros/1/ejemplares",
+              "host": ["{{base_url}}"],
+              "path": ["libros", "1", "ejemplares"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Solicitudes, Préstamos y Devoluciones",
+      "item": [
+        {
+          "name": "Solicitar Préstamo de Ejemplar (POST /solicitudes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_ejemplar\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitudes",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes"]
+            }
+          }
+        },
+        {
+          "name": "Listar Todas las Solicitudes - Admin (GET /solicitudes)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/solicitudes",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes"]
+            }
+          }
+        },
+        {
+          "name": "Aprobar Solicitud y Generar Préstamo (PATCH /solicitudes/:id/approve)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/solicitudes/1/approve",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes", "1", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Registrar Devolución de Préstamo (POST /solicitudes/:id/devolver)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observaciones\": \"Libro devuelto a tiempo y en excelente estado.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitudes/1/devolver",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes", "1", "devolver"]
+            }
+          }
+        },
+        {
+          "name": "Mis Préstamos del Usuario Autenticado (GET /solicitudes/mis-prestamos)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/solicitudes/mis-prestamos",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes", "mis-prestamos"]
+            }
+          }
+        },
+        {
+          "name": "Mis Solicitudes del Usuario Autenticado (GET /solicitudes/mis-solicitudes)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/solicitudes/mis-solicitudes",
+              "host": ["{{base_url}}"],
+              "path": ["solicitudes", "mis-solicitudes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Administración y Carga Masiva Excel",
+      "item": [
+        {
+          "name": "Cargar Usuarios Masivamente desde Excel (POST /admin/usuarios/upload-excel)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/usuarios/upload-excel",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "usuarios", "upload-excel"]
+            }
+          }
+        },
+        {
+          "name": "Listar Usuarios Registrados (GET /admin/usuarios)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/usuarios",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "usuarios"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
